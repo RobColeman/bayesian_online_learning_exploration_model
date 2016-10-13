@@ -9,15 +9,17 @@ import config.Configuration
   */
 object BayesianOnlineLearnerExplorationModel extends Configuration {
 
+  val Name: String = "BOLExplorer"
+
   val ImpressionThreshold: Long = conf.getLong("impressionThreshold")
 
   def apply(
     campaignTargetImpressionCounts: Array[CampaignImpressionCounts]
   ): BayesianOnlineLearnerExplorationModel = {
 
-    val priors: GlobalPriors = GlobalPriorsFactory.globalPriors()
+    val priors: BOLEPriors = BOLEPriorsFactory.globalPriors()
 
-    val models: Array[CampaignModel] = campaignTargetImpressionCounts.map(CampaignModel(_, priors))
+    val models: Array[CampaignBetaBinomialModel] = campaignTargetImpressionCounts.map(CampaignBetaBinomialModel(_, priors))
 
     // We should really be using the data dump timestamp
     new BayesianOnlineLearnerExplorationModel(models, ImpressionThreshold)
@@ -33,18 +35,18 @@ object BayesianOnlineLearnerExplorationModel extends Configuration {
   *                  this timestamp should correspond to the updating data timestamp.
   */
 class BayesianOnlineLearnerExplorationModel(
-  models:              Array[CampaignModel],
-  ImpressionThreshold: Long,
-  private var invalidCampaigns:    Set[String] = Set.empty[String],
-  val timeStamp:       Int = Timestamp.getCurrentSeconds
+                                             models:              Array[CampaignBetaBinomialModel],
+                                             ImpressionThreshold: Long,
+                                             private var invalidCampaigns:    Set[String] = Set.empty[String],
+                                             val timeStamp:       Int = Timestamp.getCurrentSeconds
 ) extends ExplorationModel {
 
-  val name: String = "BOLExplorer"
+  val Name: String = BayesianOnlineLearnerExplorationModel.Name
 
-  override def toString: String = s"$name loaded at $timeStamp"
+  override def toString: String = s"$Name loaded at $timeStamp"
 
-  val modelsMap: Map[String, CampaignModel] = {
-    val (belowThresh, aboveThresh): (Array[CampaignModel], Array[CampaignModel]) =
+  val modelsMap: Map[String, CampaignBetaBinomialModel] = {
+    val (belowThresh, aboveThresh): (Array[CampaignBetaBinomialModel], Array[CampaignBetaBinomialModel]) =
       models.partition { ctModel => ctModel.getTotalImpressions < ImpressionThreshold }
 
     val aboveThresholdCampaigns: Set[String] = aboveThresh.map { _.key }.toSet
@@ -57,7 +59,7 @@ class BayesianOnlineLearnerExplorationModel(
       .toMap
   }
 
-  val priors: GlobalPriors = models.head.priors
+  val priors: BOLEPriors = models.head.priors
   val ctrPrior = new BetaDistribution(priors.ctrPrior.alpha, priors.ctrPrior.beta)
   val irPrior = new BetaDistribution(priors.irPrior.alpha, priors.irPrior.beta)
 
@@ -89,10 +91,10 @@ class BayesianOnlineLearnerExplorationModel(
     timestamp: Int = Timestamp.getCurrentSeconds
   ): BayesianOnlineLearnerExplorationModel = {
 
-    val updatedModels: Array[CampaignModel] = newCounts.map{ counts =>
+    val updatedModels: Array[CampaignBetaBinomialModel] = newCounts.map{ counts =>
       modelsMap.get(counts.key) match {
         case Some(ctModel) => ctModel.update(counts)
-        case None => CampaignModel(counts, this.priors)
+        case None => CampaignBetaBinomialModel(counts, this.priors)
       }
     }
 

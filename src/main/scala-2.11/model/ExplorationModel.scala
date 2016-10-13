@@ -8,6 +8,6 @@ import config.Configuration
 trait ExplorationModel extends Configuration {
   def isValidExplorationCampaign(campaignId: String): Boolean
   def score(campaignId: String): Scores
-  val name: String
+  val Name: String
   val timeStamp: Int
 }

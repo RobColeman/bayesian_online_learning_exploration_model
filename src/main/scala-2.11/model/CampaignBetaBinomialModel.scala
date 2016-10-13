@@ -2,23 +2,23 @@ package model
 
 import org.apache.commons.math3.distribution.BetaDistribution
 
-object CampaignModel {
+object CampaignBetaBinomialModel {
 
   def apply(
     impressionCounts: CampaignImpressionCounts,
-    globalPriors:     GlobalPriors
-  ): CampaignModel = new CampaignModel(impressionCounts, globalPriors)
+    globalPriors:     BOLEPriors
+  ): CampaignBetaBinomialModel = new CampaignBetaBinomialModel(impressionCounts, globalPriors)
 
 }
 
-class CampaignModel(
+class CampaignBetaBinomialModel(
   private val impressionCounts: CampaignImpressionCounts,
-  globalPriors:     GlobalPriors
+  globalPriors:     BOLEPriors
 ) {
 
   val key: String = impressionCounts.key
   val campaignId: String = impressionCounts.campaignId
-  val priors: GlobalPriors = globalPriors
+  val priors: BOLEPriors = globalPriors
 
   def getTotalImpressions = impressionCounts.impressions
   def getClicks = impressionCounts.clicks
@@ -45,9 +45,9 @@ class CampaignModel(
     new BetaDistribution(alpha + x - 1, n - x + beta - 1)
   }
 
-  def update(newImpressionCounts: CampaignImpressionCounts): CampaignModel = {
+  def update(newImpressionCounts: CampaignImpressionCounts): CampaignBetaBinomialModel = {
     require(newImpressionCounts.key == this.key)
-    CampaignModel(this.impressionCounts + newImpressionCounts,priors)
+    CampaignBetaBinomialModel(this.impressionCounts + newImpressionCounts,priors)
   }
 
 }
